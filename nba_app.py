@@ -51,14 +51,11 @@ def display_results(selected_player_name, selected_stat, comparison_value):
         st.error("Jogador não encontrado.")
         return
 
-    selected_player_team = get_player_team(selected_player_id)
-    st.write(f"Time: {selected_player_team}")
-
     gamelog = playergamelog.PlayerGameLog(player_id=selected_player_id, season='2024-25')
     games = gamelog.get_data_frames()[0].head(10)
 
-    stats_column = "REB" if selected_stat == "REB" else "AST"
-    st.write(f"Resultados para {selected_player_name} - Estatística: {selected_stat}")
+    stats_column = "REB" if "Rebotes" in selected_stat else "AST"
+    st.write(f"**Resultados para {selected_player_name} - Estatística: {selected_stat}**")
 
     results = []
     all_games_in_analysis = True
@@ -79,24 +76,56 @@ def display_results(selected_player_name, selected_stat, comparison_value):
         results.append([game_date, game_stat, f"{home_team} x {away_team}", result_text])
 
     results_df = pd.DataFrame(results, columns=["Data", "Estatística", "Partida", "Resultado"])
-    st.write(results_df)
-
+    
+    # Exibe o resultado da análise acima do relatório
     result_label_text = "Resultado final: Dentro da análise" if all_games_in_analysis else "Resultado final: Fora da análise"
     st.write(result_label_text)
+    
+    # Exibe o DataFrame com os resultados
+    st.write(results_df)
 
 # Obter jogadores ativos
 active_players = get_active_players()
 
-st.title("NBA Player Stats")
+# Função para resetar os campos
+def reset_fields():
+    st.session_state.selected_player_name = ""
+    st.session_state.selected_stat = ""
+    st.session_state.comparison_value = 2
 
-selected_player_name = st.selectbox("Selecione o jogador", [player['full_name'] for player in active_players])
-selected_player_id = next(player['id'] for player in active_players if player['full_name'] == selected_player_name)
-selected_player_team = get_player_team(selected_player_id)
+# Verifica o estado de controle para saber se a página deve ser recarregada
+if 'reset_page' not in st.session_state:
+    st.session_state.reset_page = False
 
-st.write(f"Time: {selected_player_team}")
+# Se for necessário, redefine os campos de seleção
+if st.session_state.reset_page:
+    reset_fields()  # Reseta os campos
+    st.session_state.reset_page = False  # Reseta o controle de recarga
 
-selected_stat = st.selectbox("Selecione a estatística", ["REB", "AST"])
-comparison_value = st.selectbox("Selecione o número para comparação", [2, 3])
+# Campo de jogador vazio no início
+selected_player_name = st.selectbox("Selecione o jogador", [""] + [player['full_name'] for player in active_players])
 
-if st.button("Mostrar Resultados"):
-    display_results(selected_player_name, selected_stat, comparison_value)
+# Verifica se foi selecionado um jogador
+if selected_player_name:
+    selected_player_id = next(player['id'] for player in active_players if player['full_name'] == selected_player_name)
+
+    # Alterando o campo de estatísticas para incluir as opções de comparação
+    stat_options = ["2+ Rebotes", "2+ Assistências", "3+ Rebotes", "3+ Assistências"]
+    selected_stat = st.selectbox("Selecione a estatística", stat_options)
+
+    # Agora, extrair o número de comparação (2 ou 3) da opção selecionada
+    comparison_value = int(selected_stat.split("+")[0])
+
+    # Salva os dados no session_state para persistir
+    st.session_state.selected_player_name = selected_player_name
+    st.session_state.selected_stat = selected_stat
+    st.session_state.comparison_value = comparison_value
+
+    if st.button("Mostrar Resultados"):
+        display_results(selected_player_name, selected_stat, comparison_value)
+
+# Adicionando botão para forçar o recarregamento da página
+if st.button("Recarregar a página"):
+    reset_fields()  # Limpa os campos de seleção
+    st.session_state.reset_page = True
+    st.experimental_rerun()  # Força o recarregamento da página
