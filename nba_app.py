@@ -128,4 +128,4 @@ if selected_player_name:
 if st.button("Recarregar a página"):
     reset_fields()  # Limpa os campos de seleção
     st.session_state.reset_page = True
-    st.experimental_rerun()  # Força o recarregamento da página
+    st.rerun()  # Força o recarregamento da página
