@@ -27,23 +27,33 @@ def display_results(selected_player_name, selected_stat, comparison_value):
     if ultimo_jogo is not None:
         time_jogador = ultimo_jogo['MATCHUP'].split()[0]
 
+    total_minutes = 0  
+
     for _, game in games.iterrows():
         game_stat = game[stats_column]
         game_date = game['GAME_DATE']
         matchup = game['MATCHUP']
+        minutos_jogados = game['MIN']  # Obtém os minutos jogados na partida
+        
         result_text = "Dentro da análise" if game_stat >= comparison_value else "Fora da análise"
         if game_stat >= comparison_value:
             jogos_dentro += 1
         else:
             jogos_fora += 1
-        results.append([game_date, game_stat, matchup, result_text])
+            
+        results.append([game_date, game_stat, minutos_jogados, matchup, result_text])
+        
+        total_minutes += minutos_jogados  
     
-    results_df = pd.DataFrame(results, columns=["Data", "Estatística", "Partida", "Resultado"])
+    average_minutes = total_minutes / len(games) if len(games) > 0 else 0  
+    
+    results_df = pd.DataFrame(results, columns=["Data", "Estatística", "Minutos Jogados", "Partida", "Resultado"])
     
     st.write(f"**Resultados para {selected_player_name} ({time_jogador}) - Estatística: {selected_stat}**")
     st.write(f"**Resultado final: {'Dentro da análise' if jogos_fora == 0 else 'Fora da análise'}**")
     st.write(f"**Jogos dentro da análise:** {jogos_dentro}")
     st.write(f"**Jogos fora da análise:** {jogos_fora}")
+    st.write(f"**Média de minutos jogados nos últimos 10 jogos:** {average_minutes:.2f} minutos")  
     st.write(results_df)
 
 # Obter jogadores ativos
@@ -63,7 +73,7 @@ if st.session_state.reset_page:
 
 selected_player_name = st.selectbox("Selecione o jogador", [""] + [p['full_name'] for p in active_players])
 if selected_player_name:
-    selected_stat = st.selectbox("Selecione a estatística", ["2+ Rebotes", "2+ Assistências", "3+ Rebotes", "3+ Assistências"])
+    selected_stat = st.selectbox("Selecione a estatística", ["2+ Rebotes", "3+ Rebotes", "2+ Assistências", "3+ Assistências"])
     comparison_value = int(selected_stat.split("+")[0])
     st.session_state.update({"selected_player_name": selected_player_name, "selected_stat": selected_stat, "comparison_value": comparison_value})
     if st.button("Mostrar Resultados"):
