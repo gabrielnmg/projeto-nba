@@ -2,10 +2,19 @@ import streamlit as st
 from nba_api.stats.static import players
 from nba_api.stats.endpoints import playergamelog
 import pandas as pd
+import re
 
 def get_active_players():
     all_players = players.get_players()
     return [player for player in all_players if player['is_active']]
+
+def extrair_time(partida):
+    """
+    Função para extrair o nome do time da coluna 'Partida'.
+    Assumindo que o formato seja 'Time A vs Time B', onde 'Time A' é o time do jogador.
+    """
+    match = re.match(r"(\w+)\s+vs", partida)
+    return match.group(1) if match else None
 
 def display_results(selected_player_name, selected_stat, comparison_value):
     selected_player_id = next((p['id'] for p in active_players if p['full_name'] == selected_player_name), None)
@@ -28,6 +37,7 @@ def display_results(selected_player_name, selected_stat, comparison_value):
         game_date = game['GAME_DATE']
         matchup = game['MATCHUP']
         minutos_jogados = int(game['MIN'])
+        time = extrair_time(matchup)  # Nome do time extraído
         
         result_text = "Dentro da análise" if game_stat >= comparison_value else "Fora da análise"
         if game_stat >= comparison_value:
@@ -35,12 +45,12 @@ def display_results(selected_player_name, selected_stat, comparison_value):
         else:
             jogos_fora += 1
             
-        results.append([game_date, game_stat, minutos_jogados, matchup, result_text])
+        results.append([game_date, game_stat, minutos_jogados, matchup, time, result_text])
         total_minutes += minutos_jogados
     
     average_minutes = total_minutes / len(games) if len(games) > 0 else 0
     
-    results_df = pd.DataFrame(results, columns=["Data", "Assistências", "Minutos Jogados", "Partida", "Resultado"])
+    results_df = pd.DataFrame(results, columns=["Data", "Assistências", "Minutos Jogados", "Partida", "Time", "Resultado"])
     
     st.write(f"**Resultados para {selected_player_name} - Estatística: {selected_stat}**")
     st.write(f"**Resultado final: {'Dentro da análise' if jogos_fora == 0 else 'Fora da análise'}**")
